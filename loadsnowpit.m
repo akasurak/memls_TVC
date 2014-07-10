@@ -1,0 +1,10 @@
+function result = loadsnowpit(filename)
+y=load(filename);
+result.di=y(:,5);
+result.y1=find(result.di>0);
+result.num  = y(result.y1,1);
+result.Ti   = y(:,2);
+result.Wi   = y(:,3);
+result.roi  = y(:,4);
+result.Sppt = y(:,6);
+result.pci  = y(:,7);
