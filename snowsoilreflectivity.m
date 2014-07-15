@@ -3,7 +3,7 @@ function [r_h_mod, r_v_mod , fresnel_h, fresnel_v] = snowsoilreflectivity(freq, 
 %   Date: 13/05/14
 %   Author: J. King
 %   Based on code by B. Montpetit (ss_ref_grass.m, ruffsoil.m) and
-%   reflectivity approach detailed in Wagmuller & Matzler 2009
+%   reflectivity approach detailed in Wegmuller & Matzler 2009
 %   Uses: ruffsoil.m, huteps.m, tdgrmdm.m. epss.m, epsr.m, gammah.m
 %   Date: 13/05/14
 %
@@ -19,20 +19,20 @@ function [r_h_mod, r_v_mod , fresnel_h, fresnel_v] = snowsoilreflectivity(freq, 
 
 
 %Constants
-epiSnowMethod = 0; % Default = MEMLS, 1 = HUT 
-epiSoilMethod = 1; % Default = HUT, 1 = Mironov 2010
-sihMethod = 0;
+epiSnowMethod = 1; % Default = MEMLS, 1 = HUT 
+epiSoilMethod = 1; % Default = Dobson, 1 = Mironov 2010
+sihMethod = 1;  %Default = MEMLS, 1 = HUT but is currently broken, 
 
-mgSoil = 0.6; %Gravametric soil density for Mironov 2010
+mgSoil = 0.6; %Gravametric soil density for Mironov model
 tSoil = tSoilK - 273.15;
 tSnow = tSnowK - 273.15; %Temp of base snow layer
 rhoSnow = rhoSnow./1000; %Density of base snow layer 
+theta_r = (theta * pi) / 180;
+  
 
   if epiSoilMethod == 1
         epiSoil=real(tdgrmdm(tSoilK,mgSoil,mvSoil,freq)); %Method frmo Mironov 2010
-   else
-        %epiSoil=real(epss(mvSoil,tSoil,freq*1e9)) %Method from MEMLS (Dobson)
-        %higheps(theta,f,sand,clay,rhob,rhos)
+  else
         [er,ei]=higheps(mvSoil,freq*1e9,0.4,0.3,1.6,2.6);
         epiSoil = er;
   end
@@ -43,11 +43,9 @@ rhoSnow = rhoSnow./1000; %Density of base snow layer
         epiSnow = real(epsr(rhoSnow)); % MEMLS method
   end
    
-  theta_r = (theta * pi) / 180;
-  
   
   if sihMethod == 1   
-       nsSnow  = sqrt(epiSnow);
+         nsSnow  = sqrt(epiSnow);
          nsSoil = sqrt(epiSoil);
          tei = [asin(sin(theta_r)./nsSoil);asin(sin(theta_r)./nsSnow)];
          epsEff = epiSoil./epiSnow;
@@ -59,16 +57,12 @@ rhoSnow = rhoSnow./1000; %Density of base snow layer
          tei = [asin(sin(theta_r)./nsSoil);asin(sin(theta_r)./nsSnow)];
          [sih,siv] = fresnelyc(tei,[epiSoil;epiSnow]);
          fresnel_h = sih;
-         fresnel_v = siv;
-         
-       
+         fresnel_v = siv;     
   end
   
   theta_r_local = (tei(2) * pi) / 180; %Not sure if this should be the snow or ground theta.
   
-  kSigma = real(2*pi*freq*1e9*sqrt(pi*4e-7*8.8542e-12*epiSnow))*sigSoil; % Soil roughness paramterization
+  kSigma = real(2*pi*freq*1e9*sqrt(pi*4e-7*8.8542e-12*epiSnow))*sigSoil; % Soil roughness paramterization sourced from HUT
    
-
   r_h_mod = fresnel_h.*exp(-kSigma.^(sqrt(0.1.*cos(theta_r))));
-  r_v_mod = r_h_mod.*cos(theta_r).^0.655;%1.72;%0.655;%1.38;
-  %r_v_mod = r_h_mod.*(0.635-(0.0014*(theta-60)))%1.72;%0.655;%1.38;
+  r_v_mod = r_h_mod.*cos(theta_r).^0.655; %TODO Build in beta tuning function (0.655 currently)
