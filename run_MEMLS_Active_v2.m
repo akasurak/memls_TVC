@@ -31,33 +31,30 @@ if database == 1
     conn = database(dbname, username, password, driver, dburl);
 end 
 
+%Gather all filenames with a single prefix within the input folder
+%TODO Allow prefix input from commandline
 fName=dir(fullfile(pwd,'Input','TVC*.txt'))
 fNum=size(fName);
 
 
-for a=1:fNum(1,1)
-    
-    snowInput = loadsnowpit(fullfile(pwd,'Input',fName(a).name));
+for fIndex=1:fNum(1,1)
+   
+    snowInput = loadsnowpit(fullfile(pwd,'Input',fName(fIndex).name));
     soilInput = loadsoil(fullfile(pwd,'Input','Soil_TVC.txt')); 
-    %soilInput = loadsoil(['Soil_' fName(a).name]); %Swap with above code
-    %to change between a static soil file and soil files associated with
-    %each pit file.
-
-   for b = 1:length(freq)
-       for c = 1:length(theta)
-         [s0h, s0v, ss0h, ss0v] = snowsoilreflectivity(freq(b), theta(c), snowInput.Ti(1), snowInput.roi(1), soilInput.t, soilInput.mv,  soilInput.sig);
+    %soilInput = loadsoil(['Soil_' fName(a).name]);
+  
+   for freqIndex = 1:length(freq)
+       for thetaIndex = 1:length(theta)
+         [s0h, s0v, ss0h, ss0v] = snowsoilreflectivity(freq(freqIndex), theta(thetaIndex), snowInput.Ti(1), snowInput.roi(1), soilInput.t, soilInput.mv,  soilInput.sig);
     
            
          %Note: input for soil reflectivity needs to be addressed. 
-           MEMLS_result(a,b,c) = amemlsmain(freq(b),theta(c),s0h,s0v,s0h/1.1,s0v/1.1,fullfile(pwd,'Input',fName(a).name),13,soilInput.t,11,m,q);
-           MEMLS_Sig0VV(a) = MEMLS_result(a,b,c).sigma0(1);
+           MEMLS_result(fIndex,freqIndex,thetaIndex) = amemlsmain(freq(freqIndex),theta(thetaIndex),s0h,s0v,s0h/1.1,s0v/1.1,fullfile(pwd,'Input',fName(fIndex).name),13,soilInput.t,11,m,q);
+           MEMLS_Sig0VV(fIndex) = MEMLS_result(fIndex,freqIndex,thetaIndex).sigma0(1);
            
-           10*log10(MEMLS_result(a,b,c).sigma0)
-           
+           10*log10(MEMLS_result(fIndex,freqIndex,thetaIndex).sigma0)
        end
-
    end
-  
 end
 
 hist(10*log10(MEMLS_Sig0VV))
