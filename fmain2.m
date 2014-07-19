@@ -99,6 +99,7 @@ yv=1-(yv-yev)/100;  % snowpack&ground system emissivity in %
 yh=1-(yh-yeh)/100;
 
 %  graphical output
+figure;
 h = plot(x,yh,'k--');
 hold on
 k = plot(x,yv,'r-');
@@ -106,16 +107,24 @@ legend([h,k],'eh','ev')
 xlabel('Incidence Angle [deg]')
 ylabel('Emissivity')
 title(['snow layer model - inputdata: ',ifile])
-gtext(['T ground: ',num2str(Tgnd),'K;  snow-ground reflectivity (h/v): ',num2str(s0h),'/',num2str(s0v)])
-hold off
+%gtext(['T ground: ',num2str(Tgnd),'K;  snow-ground reflectivity (h/v): ',num2str(s0h),'/',num2str(s0v)])
+disp(['T ground: ',num2str(Tgnd),'K;  snow-ground reflectivity (h/v): ',num2str(s0h),'/',num2str(s0v)])
+text(x(2),yh(length(yh)),['T ground: ',num2str(Tgnd),'K;  snow-ground reflectivity (h/v): ',num2str(s0h),'/',num2str(s0v)])
+hold off;
 
 figure;
-plot(x,yeh,'k--',x,yev,'r-',x,yeh./yh,'k-',x,yev./yv,'r.');
+h2=plot(x,yeh,'k--',x,yev,'r-',x,yeh./yh,'k-',x,yev./yv,'r.');
+hold on
 legend('Teh','Tev','Teff,h','Teff,v')
 xlabel('Incidence Angle [deg]')
 ylabel('Emitted Brightness Temp,  Effective Temp [K]')
 title(['snow layer model - inputdata: ',ifile])
-gtext(['T ground: ',num2str(Tgnd),'K;  snow-ground reflectivity (h/v): ',num2str(s0h),'/',num2str(s0v)])
-hold off
+%gtext(['T ground: ',num2str(Tgnd),'K;  snow-ground reflectivity (h/v): ',num2str(s0h),'/',num2str(s0v)])
+disp(['T ground: ',num2str(Tgnd),'K;  snow-ground reflectivity (h/v): ',num2str(s0h),'/',num2str(s0v)])
+text(x(2),yeh(length(yeh)),['T ground: ',num2str(Tgnd),'K;  snow-ground reflectivity (h/v): ',num2str(s0h),'/',num2str(s0v)])
+hold off;
+
 result=[x',yh',yv',yeh',yev',yeh'./yh',yev'./yv'];
 % Incidence angle(deg), eh(%), ev(%), Tebh(K), Tebv(K), Teffh(K), Teffv(K) 
+
+%close all
