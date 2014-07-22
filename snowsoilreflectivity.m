@@ -38,7 +38,7 @@ theta_r = (theta * pi) / 180;
   end
     
   if epiSnowMethod == 1
-        epiSnow = real(huteps(freq,tSnowK,rhoSnow,0,0)); % HUT method
+        epiSnow = real(huteps(freq,tSnowK,rhoSnow,0,0)); % HUT method %AK: find multilayer HUT eps in coreh2o's snowemis_nlayer.m
   else
         epiSnow = real(epsr(rhoSnow)); % MEMLS method
   end
