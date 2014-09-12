@@ -95,7 +95,7 @@ yv=1-(yv-yev)/100;  % snowpack&ground system emissivity
 yh=1-(yh-yeh)/100;
 
 %  graphical output
-figure;
+sfigure;
 h = semilogx(x,yh,'k--');
 hold on
 k = semilogx(x,yv,'r-');
@@ -105,10 +105,10 @@ ylabel('Emissivity')
 title(['snow layer model - inputdata: ',ifile])
 disp(['T ground: ',num2str(Tgnd),'K;  snow-ground reflectivity (h/v): ',num2str(s0h),'/',num2str(s0v)])
 %gtext(['T ground: ',num2str(Tgnd),'K;  snow-ground reflectivity (h/v): ',num2str(s0h),'/',num2str(s0v)])
-text(x(2),yh(length(yh)),['T ground: ',num2str(Tgnd),'K;  snow-ground reflectivity (h/v): ',num2str(s0h),'/',num2str(s0v)])
+text(x(2),yh(length(yh)-1),['T ground: ',num2str(Tgnd),'K;  snow-ground reflectivity (h/v): ',num2str(s0h),'/',num2str(s0v)])
 hold off
 
-figure;
+sfigure;
 semilogx(x,yeh,'k--',x,yev,'r-',x,yeh./yh,'k-',x,yev./yv,'r.');
 hold on
 legend('Teh','Tev','Teff,h','Teff,v')
@@ -116,7 +116,9 @@ xlabel('Frequency [GHz]')
 ylabel('Emitted Brightness Temp,  Effective Temp [K]')
 title(['snow layer model - inputdata: ',ifile])
 %gtext(['T ground: ',num2str(Tgnd),'K;  snow-ground reflectivity (h/v): ',num2str(s0h),'/',num2str(s0v)])
-text(x(2),yeh(length(yeh)),['T ground: ',num2str(Tgnd),'K;  snow-ground reflectivity (h/v): ',num2str(s0h),'/',num2str(s0v)])
+text(x(2),yeh(length(yeh)-1),['T ground: ',num2str(Tgnd),'K;  snow-ground reflectivity (h/v): ',num2str(s0h),'/',num2str(s0v)])
 hold off
+
+%Return results
 result=[x',yh',yv',yeh',yev',yeh'./yh',yev'./yv'];
 % Frequency(GHz), eh(%), ev(%), Tebh(K), Tebv(K), Teffh(K), Teffv(K) 
