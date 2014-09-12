@@ -1,0 +1,124 @@
+===MEMLS configuration variables===
+
+repo	report stuff?  (==verbose?)
+
+
+===MEMLS variables===
+
+All angles in radians
+
+==prefix==
+r*	reflected?
+
+==postfix==
+*d	sometimes for dry snow
+*ii	imaginary? Dont confuse with *i which probably means real...
+
+
+==variables==
+
+f1:    start frequency [GHz]
+f2:    stop frequency [GHz]
+
+rl=lmain2(10, 100, 50, 0, 0, 'test1salayer.txt', 273, 11)
+ifile: Snowpack-Input File with
+x	Frequency(GHz)
+yh	eh(%)
+yv	ev(%)
+yeh	Tebh(K)
+yev	Tebv(K)
+
+Ti		physical snow temperature  (K)
+Tgnd	brightness temperature of ground (K)
+eii		imag epsilon of saline ice
+epsiid	imag epsilon of dry snow component
+epsd	complex permittivity of dry snow
+eps		complex permittivity of snow (wet, temperature)
+epsi	real epsilon of snow, dry or wet
+epsii	imag epsilon of snow, dry or wet
+gai		absorption coeff (1/m)
+ns		approx. real refractive index of snow
+tei		local incidence angle
+dei		effective path length of snow (m)
+kq		K^2 ratio
+v		ice volume fraction
+roi		density (g/cm3)
+di		thickness|depth of snow	(m)
+epsid	epsilon of dry snow
+nid		real refract.index of dry snow
+sih		interface reflectivity at h pol
+siv		interface reflectivity at v pol
+pci		correlation length [mm]
+Wi		wetness  
+num		index of the layer in the original snowpack
+N		number of layers?
+gbih	2-flux scattering coefficient at h pol
+gbiv	2-flux scattering coefficient at v pol
+gs6		6-flux scattering coefficient
+ga2i	2-flux absorption coefficient
+sccho	scattering coefficient algorithm chosen
+kq		squared field ratio K^2 (for sccho=12)
+tscat	scattering 
+teta	incidence angle at snow air interface
+tetad	incidence angle [deg]  (at snow layer? effective?)
+s0h		snow-ground reflectivity 
+s0v		snow-ground reflectivity
+rsih	[s0h;rsih]
+rsiv	[s0v;rsiv]
+tscat	tau scat
+ri		layer reflectivity
+ti		layer transmissivity
+gbi		scattering coefficient
+D		upwelling brightness temperature
+Dh		H upwelling brightness temperature
+Dv		V upwelling brightness temperature
+Tsky	brightness temperature of the sky
+Tbeh	H emitted brightness temperature (Tsky=0)
+Tbev	V emitted brightness temperature (Tsky=0)
+Tbh		H emitted brightness temperature Tsky=100K
+Tbv		V emitted brightness temperature Tsky=100K
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+===MEMLS functions===
+pfadc		calculates the effective path length in a layer
+slred		locates and treats coherent layers in a snowpack
+sccoeff		calculates the scattering coefficient from structural parameters
+polmix		calculates the polarization mixing of the interface reflectivities of each layer (taking into account the first order scattering)
+rt			calculates the layer reflectivity and transmissivity  
+layer		calculates the upwelling brightness temperatures D (see Note 6 or Wiesmann and Matzler 1999)  
+
+
+===MEMLS input file===
+layer-number, temp [K], vol. fraction of liquid water, density [kg/m3], thickness [cm], Salinity (0 - 0.1) [ppt], expon.corr.length [mm]
+
+
+
+
+
+===TODO===
+sccoeff:
+	*missing option for sccho=6
+	*missing option for sscho=3
+	*why use `whal` instead of sccho?
+	*Change long if sequence to proper switch. (dangerous else at bottom)
+
+run_MEMLS_Active_v2:
+	*amemlsmain() ss0h=s0h/1.1, why?
