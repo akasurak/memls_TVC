@@ -63,7 +63,7 @@ if wahl == 7
    gs6 = 73.21 * (pci.^3).*((freq./50).^2.68).*roi.^(-1);
 end
 % fit from 13.10.97 
-if wahl == 8
+if wahl == 8 %eqn 78 in memls3 doc
    gs6 = 136 .* (pci.^2.85) .* ((freq./50).^2.5) ./ (roi + 0.001);
 end
 % fit from 4.11.97 (without density) 
@@ -71,11 +71,11 @@ if wahl == 9
    gs6 = 564 .* (pci.^3.0) .* ((freq./50).^2.5);
 end
 % fit from 4.11.97 (without density, uses corr. length from exp. fit!)
-if wahl == 10
+if wahl == 10 %eqn 79 in memls3 doc
    gs6 = (3.16 .* pci + 295 .* (pci.^2.5)).* ((freq./50).^2.5);
 end
 % fit from 4.11.97 (with density, uses corr. length from exp. fit!)
-if wahl == 11
+if wahl == 11 %eqn 80 in memls3 doc
    con=9.20 .* pci - 1.23 .* roi + 0.54;
    gs6 = max(0,con).^2.5 .* ((freq./50).^2.5);
 end
