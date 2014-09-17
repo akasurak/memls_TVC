@@ -1,5 +1,5 @@
 %function result = amemlsmain(fGHz,tetad,s0h,s0v,ss0h,ss0v,ifile,Tgnd,sccho,m,q)
-function result = amemlsmain(fGHz,tetad,s0h,s0v,ss0h,ss0v,ifile,Tsky,Tgnd,sccho,m,q)
+function result = amemlsmain(fGHz,tetad,s0h,s0v,ss0h,ss0v,y,Tsky,Tgnd,sccho,m,q)
 %   Basic MEMLS program, computes the (brightness temperatures Tv and Th),
 %   diffuse and specular reflectivities and backscattering coefficients
 %   of a snowpack at a given frequency and incidence angle.
@@ -34,7 +34,7 @@ forwa=4;  % emprical enhancement factor of extinction by diffraction
 teta = (tetad * pi) / 180; % Transformation from degrees to radians
 c0=0.299793;               % vac. speed of light in m/ns
 
-y=load(ifile);
+%y=load(ifile);
 di=y(:,5);
 y1=find(di>0);
 num  = y(y1,1);
