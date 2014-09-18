@@ -33,12 +33,12 @@ end
 
 %Gather all filenames with a single prefix within the input folder
 %TODO Allow prefix input from commandline
-fName=dir(fullfile(pwd,'Input','TVC*.txt'))
+fName=dir(fullfile(pwd,'Input','micro*.txt'))
 fNum=size(fName);
 
 
 for fIndex=1:fNum(1,1)
-   
+   fName(fIndex).name
     snowInput = loadsnowpit(fullfile(pwd,'Input',fName(fIndex).name));
     soilInput = loadsoil(fullfile(pwd,'Input','Soil_TVC.txt')); 
     %soilInput = loadsoil(['Soil_' fName(a).name]);
@@ -49,7 +49,7 @@ for fIndex=1:fNum(1,1)
     
            
          %Note: input for soil reflectivity needs to be addressed. 
-           MEMLS_result(fIndex,freqIndex,thetaIndex) = amemlsmain(freq(freqIndex),theta(thetaIndex),s0h,s0v,s0h/1.1,s0v/1.1,fullfile(pwd,'Input',fName(fIndex).name),13,soilInput.t,11,m,q);
+           MEMLS_result(fIndex,freqIndex,thetaIndex) = amemlsmain(freq(freqIndex),theta(thetaIndex),s0h,s0v,s0h/1.1,s0v/1.1,fullfile(pwd,'Input',fName(fIndex).name),13,soilInput.t,12,m,q);
            MEMLS_Sig0VV(fIndex) = MEMLS_result(fIndex,freqIndex,thetaIndex).sigma0(1);
            
            10*log10(MEMLS_result(fIndex,freqIndex,thetaIndex).sigma0)
@@ -57,4 +57,5 @@ for fIndex=1:fNum(1,1)
    end
 end
 
-hist(10*log10(MEMLS_Sig0VV))
+%csvwrite('vvoutput.csv', MEMLS_Sig0VV)
+%hist(10*log10(MEMLS_Sig0VV))
