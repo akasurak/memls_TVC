@@ -28,7 +28,7 @@ tSnow = tSnowK - 273.15; %Temp of base snow layer
 rhoSnow = rhoSnow./1000; %Density of base snow layer 
 theta_r = (theta * pi) / 180;
 
-C = 299792458;
+c = 299792458;
   
 
   if epiSoilMethod == 1
@@ -60,17 +60,22 @@ C = 299792458;
   
   theta_r_local = (tei(2) * pi) / 180; %Not sure if this should be the snow or ground theta.
   
-  wavenumber = (1/((C/nsSnow)/(freq*1000000000)))/100; %Wavenumber in cm^-1 adjusted for the speed of light in snow
+  %wavenumber = (1/((C/nsSnow)/(freq*1000000000)))/100; %Wavenumber in
+  %cm^-1 adjusted for the speed of light in snow %THIS IS WRONG, it should
+  %be angular wavenumber
   
-  kSigma = wavenumber * sigSoil;
+  effWave = (c/nsSnow)/freq*1e-7 %Effective wavelength (cm) in snow
+  effK = 2*pi/effWave %Effective wavenumber (rad/cm) in snow
+  
+  kSigma = effK * sigSoil
   
   if kSigma < 0.07 || kSigma > 27.5
-      disp(['Out of range! k = ' num2str(wavenumber) ' sigma = '  num2str(sigSoil)]); 
+      disp(['Out of range! k = ' num2str(effK) ' sigma = '  num2str(sigSoil)]); 
   end
   
   %kSigma = real(2*pi*freq*1e9*sqrt(pi*4e-7*8.8542e-12*epiSnow))*sigSoil; %
   %JK: The above is ben's implimentation of kSigma, according to the paper the valid
   %kSigma range is 0.07 to 27.5 so I'm not sure its valid. 
    
-  r_h_mod = fresnel_h.*exp(-kSigma.^(sqrt(0.1.*cos(theta_r))));
-  r_v_mod = r_h_mod.*cos(theta_r).^0.655; %TODO Build in beta tuning function (0.655 currently)
+  r_h_mod = fresnel_h.*exp(-kSigma.^(sqrt(0.1.*cos(theta_r))))
+  r_v_mod = r_h_mod.*cos(theta_r).^0.655 %TODO Build in beta tuning function (0.655 currently)
