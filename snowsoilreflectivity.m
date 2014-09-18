@@ -14,7 +14,7 @@ function [r_h_mod, r_v_mod , fresnel_h, fresnel_v] = snowsoilreflectivity(freq, 
 %   rhoSnow: Density of the snow layer above the soil (in Kg m^-3) 
 %   tSoil:  Temperature of the soil surface (in K)
 %   mvSoil: Volumetric soil moisture (m3/m3)
-%   sigSoil: Soil roughness (cm);
+%   sigSoil: Soil roughness (cm) = standard deviation of surface height (W&M 1999);
 
 
 
@@ -65,7 +65,7 @@ C = 299792458;
   kSigma = wavenumber * sigSoil;
   
   if kSigma < 0.07 || kSigma > 27.5
-      disp(['Out of range! k = ' num2str(wavenumber) ' sigma = '  num2str(sigSoil)]); 
+      disp(['snowsoilreflectivity>>    kSigma Out of range! (27.5 < [kSigma= ',num2str(kSigma),'] < 0.07); k = ' num2str(wavenumber) ' sigma = '  num2str(sigSoil)]); 
   end
   
   %kSigma = real(2*pi*freq*1e9*sqrt(pi*4e-7*8.8542e-12*epiSnow))*sigSoil; %
