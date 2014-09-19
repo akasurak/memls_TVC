@@ -212,6 +212,9 @@ m=0.075  #amemlsmain%     m:     mean slope of surface undulations (typical 0.05
 q=0.3    #amemlsmain%     q:     cross pol fraction (typical 0.1 to 0.3)
 
 results=data.frame()
+
+for(m in seq(0.05,1,length=20)){
+	for(q in seq(0.1,0.3,length=20)){
 for(i in 1:nrow(sweobs)){
 	pit=sweobs[i,]
 	print(pit)
@@ -239,15 +242,21 @@ for(i in 1:nrow(sweobs)){
 	
 	MEMLSresults=read.csv(outfilename, header=F)
 	names(MEMLSresults)=c("freq","theta","s0h", "s0v", "ss0h", "ss0v", "rv","rh","rdv","rdh","rsv","rsh","rs0","sigma0vv","sigma0hh","sigma0hv","Tbv","Tbh")
+	MEMLSresults$m=m
+	MEMLSresults$q=q
 	MEMLSresults=data.frame(pit,MEMLSresults)
 	results=rbind(results,MEMLSresults)
 }
-
-
+}
+}
 results$modelver="VerGIT"
 results$model="MEMLS3a"
+results$modelRunDate=Sys.time()
 results$simvar1=results$simvar2="none"
 results$nlayer=1
+save(results,file=paste("Results_",format(Sys.time(), "%Y_%m_%d__%H_%M"),".Rdata",sep=""))
+
+
 
 
 names(simtable)[1:17]=c( "filename","datenum", "modelnum", "modelver", "incidence", "nlayer", "varnum1", "varnum2", "simvalue1", "simvalue2", "Xvv", "Xvh", "Kvv", "Kvh", "epsgRE", "epsgIM", "experiment")
