@@ -28,55 +28,55 @@ yv	ev(%)
 yeh	Tebh(K)
 yev	Tebv(K)
 
-Ti		physical snow temperature  (K)
-Tgnd	brightness temperature of ground (K)
-eii		imag epsilon of saline ice
-epsiid	imag epsilon of dry snow component
-epsd	complex permittivity of dry snow
-eps		complex permittivity of snow (wet, temperature)
-epsi	real epsilon of snow, dry or wet
-epsii	imag epsilon of snow, dry or wet
-gai		absorption coeff (1/m)
-ns		approx. real refractive index of snow
-tei		local incidence angle
+D		upwelling brightness temperature
 dei		effective path length of snow (m)
-kq		K^2 ratio
-v		ice volume fraction
-roi		density (g/cm3)
+Dh		H upwelling brightness temperature
 di		thickness|depth of snow	(m)
+Dv		V upwelling brightness temperature
+eii		imag epsilon of saline ice
+eps		complex permittivity of snow (wet, temperature)
+epsd	complex permittivity of dry snow
+epsi	real epsilon of snow, dry or wet
 epsid	epsilon of dry snow
-nid		real refract.index of dry snow
-sih		interface reflectivity at h pol
-siv		interface reflectivity at v pol
-pci		correlation length [mm]
-Wi		wetness  
-num		index of the layer in the original snowpack
-N		number of layers?
+epsii	imag epsilon of snow, dry or wet
+epsiid	imag epsilon of dry snow component
+ga2i	2-flux absorption coefficient
+gai		absorption coeff (1/m)
+gbi		scattering coefficient
 gbih	2-flux scattering coefficient at h pol
 gbiv	2-flux scattering coefficient at v pol
 gs6		6-flux scattering coefficient
-ga2i	2-flux absorption coefficient
-sccho	scattering coefficient algorithm chosen
+kq		K^2 ratio
 kq		squared field ratio K^2 (for sccho=12)
-tscat	scattering 
-teta	incidence angle at snow air interface
-tetad	incidence angle [deg]  (at snow layer? effective?)
-s0h		snow-ground reflectivity 
-s0v		snow-ground reflectivity
+N		number of layers?
+nid		real refract.index of dry snow
+ns		approx. real refractive index of snow
+num		index of the layer in the original snowpack
+pci		correlation length [mm]
+ri		layer reflectivity
+roi		density (g/cm3)
 rsih	[s0h;rsih]
 rsiv	[s0v;rsiv]
-tscat	tau scat
-ri		layer reflectivity
-ti		layer transmissivity
-gbi		scattering coefficient
-D		upwelling brightness temperature
-Dh		H upwelling brightness temperature
-Dv		V upwelling brightness temperature
-Tsky	brightness temperature of the sky
+s0h		snow-ground reflectivity 
+s0v		snow-ground reflectivity
+sccho	scattering coefficient algorithm chosen
+sih		interface reflectivity at h pol
+siv		interface reflectivity at v pol
 Tbeh	H emitted brightness temperature (Tsky=0)
 Tbev	V emitted brightness temperature (Tsky=0)
 Tbh		H emitted brightness temperature Tsky=100K
 Tbv		V emitted brightness temperature Tsky=100K
+tei		local incidence angle
+teta	incidence angle at snow air interface
+tetad	incidence angle [deg]  (at snow layer? effective?)
+Tgnd	brightness temperature of ground (K)
+ti		layer transmissivity
+Ti		physical snow temperature  (K)
+tscat	scattering 
+tscat	tau scat
+Tsky	brightness temperature of the sky
+v		ice volume fraction
+Wi		wetness  
 
 
 

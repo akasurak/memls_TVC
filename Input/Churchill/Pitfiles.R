@@ -18,7 +18,7 @@ library(lattice)
 ########################################
 options(stringsAsFactors=F)
 lattice.options(default.args = list(as.table = TRUE))
-setwd("~/Documents/School/Projects/MEMLS/MEMLS3&a/Input/Churchill")
+setwd("~/Documents/School/Projects/MEMLS/MEMLS3&a/Input/Churchill/Pitfiles")
 
 matlabcli=paste("/Applications/MATLAB_R2014a.app/bin/matlab -nodisplay -nosplash -nodesktop -r \"cd('",getwd(),"');run('run_MEMLS_Active_v2(|pitfile|,|soilfile|,|outfile|,|freq|,|theta|,|m|,|q|,|database|)');exit;\"",sep="")
 
@@ -29,16 +29,17 @@ matlabcli=paste("/Applications/MATLAB_R2014a.app/bin/matlab -nodisplay -nosplash
 ########################################
 
 
-source('~/Documents/School/Rfunctions/R functions env.R')
-source('~/Documents/School/Projects/Paper-PeatModel/AGU2012/mironovSims/JRT_functions.R')
+source('~/Documents/School/Projects/Rfunctions/R functions env.R')
+source('~/Documents/School/Projects/Paper-Peatmodel/MODELS/MironovModel/mironov2010_newCoeff2012.R')
+source('~/Documents/School/Projects/Paper-Peatmodel/PAPER/AGU2012/mironovSims/JRT_functions.R')
 #Have run the following:
 source('~/Documents/School/Projects/Visual-Scatterometry/pitfiles.R')
 #To produce:
-load('~/Documents/School/Projects/Paper-PeatModel/AGU2012/mironovSims/pitfiles/pitfiles_tundra.rdata')
+load('~/Documents/School/Projects/Paper-PeatModel/PAPER/AGU2012/mironovSims/pitfiles/pitfiles_tundra.rdata')
 
 #Run inputbuilder portion of source('~/Documents/School/Projects/Paper-PeatModel/AGU2012/mironovSims/AGU2012-MironovSims.R')
 #This builds the following files:
-allsweobs=read.csv("~/Documents/School/Projects/Paper-PeatModel/AGU2012/mironovSims/pitfiles/allsweobs.csv")
+#allsweobs=read.csv("~/Documents/School/Projects/Paper-PeatModel/PAPER/AGU2012/mironovSims/pitfiles/allsweobs.csv")
 
 ########################################
 ########################################
@@ -151,7 +152,7 @@ allsweobs$nor=normalize(allsweobs$sweT,datarange=c(0,50))
 
 allsweobs=allsweobs[order(allsweobs$Date),]
 
-write.csv(allsweobs,file="allsweobs.csv")
+#write.csv(allsweobs,file="allsweobs.csv")
 
 ######################################
 ##	Adjust paramters for MEMLS
@@ -208,53 +209,131 @@ for(i in 1:nrow(sweobs)){
 
 freq=c(10,8,18)  #GHz
 theta=c(21,3,81) #degrees
-m=0.075  #amemlsmain%     m:     mean slope of surface undulations (typical 0.05 to 0.1)
-q=0.3    #amemlsmain%     q:     cross pol fraction (typical 0.1 to 0.3)
+MEMLS_m=0.075  #amemlsmain%     m:     mean slope of surface undulations (typical 0.05 to 0.1)
+MEMLS_q=0.3    #amemlsmain%     q:     cross pol fraction (typical 0.1 to 0.3)
+MEMLS_sccho=c(1,2,4,5,7,8,9,10,11,12) #amemlsmain%     sccho: type of scattering coefficient (11 recommended)
+MEMLS_echo_to_prompt=0
 
+#build matlab command chain.
+RUN_ID=round(as.numeric(Sys.time()))
+matlabcli="/Applications/MATLAB_R2014a.app/bin/matlab -nodisplay -nosplash -nodesktop -r \"cd('~/Documents/School/Projects/MEMLS/MEMLS3&a');\""
+cli_input=""
+for(s in MEMLS_sccho[10]){
+	for(m in seq(0.05,1,length=3)){
+		for(q in seq(0.1,0.3,length=3)){
+			for(i in 1:nrow(sweobs)){
+				pit=sweobs[i,]
+				#print(pit)
+				pitfilename=paste(c(row.names(pit),"_L1",".txt"),collapse="")
+				soilfilename=gsub("\\.txt","_soil.txt",pitfilename)
+				#Layer#, layerTemp (K), Vol LWC (0-1), PDSW (kg/m3), thickness (cm), salinity (ppthousand), exp corr len (mm) 
+				#pit=read.table(pitfilename,sep=" ")
+				#soil=read.table(soilfilename,sep=" ")
+				
+				outfilename=paste( RUN_ID,"__",gsub("\\.txt",paste("_MEMLS.txt",sep=""),pitfilename),sep="")#_m",m,"_q",q,"
+				
+				command="run_MEMLS_Active_v2_External('|pitfile|','|soilfile|','|outfile|',|freq_start|,|freq_step|,|freq_stop|,|theta_start|,|theta_step|,|theta_stop|,|m|,|q|,|sccho|,|echo_to_prompt|,|database|);"
+				command=gsub("|pitfile|",pitfilename, command,fixed=T)
+				command=gsub("|soilfile|",soilfilename,command,fixed=T)
+				command=gsub("|outfile|",outfilename,command,fixed=T)
+				command=gsub("|freq_start|",paste(freq[1],collapse=","),command,fixed=T)
+				command=gsub("|freq_step|",paste(freq[2],collapse=","),command,fixed=T)
+				command=gsub("|freq_stop|",paste(freq[3],collapse=","),command,fixed=T)
+				command=gsub("|theta_start|",paste(theta[1],collapse=","),command,fixed=T)
+				command=gsub("|theta_step|",paste(theta[2],collapse=","),command,fixed=T)
+				command=gsub("|theta_stop|",paste(theta[3],collapse=","),command,fixed=T)
+				command=gsub("|m|",m,command,fixed=T)
+				command=gsub("|q|",q,command,fixed=T)
+				command=gsub("|sccho|", s,command,fixed=T)
+				command=gsub("|echo_to_prompt|", MEMLS_echo_to_prompt,command,fixed=T)
+				command=gsub("|database|",0,command,fixed=T)
+				
+				cli_input =c(cli_input, command)
+				#cat(command)
+				
+				}
+			}
+		}
+	}
+#Run matlab on list of commands: (Bulk running nessisary due to extremly SLOW matlab loading.)
+cli_input =c(cli_input,"exit;")[-1]
+cat("Running MATLAB on ", length(cli_input)," runs of MEMLS. Standby. (ps -A |grep MATLAB to find process if it needs to be terminated...)")
+envlist=list(model="MEMLS",modelver=4.0,modeldate=as.numeric(difftime(Sys.time(),strptime(1970,"%Y"))),freq,theta,MEMLS_m,MEMLS_q,MEMLS_sccho,command,cli_input,RUN_ID,sweobs, matlabcli,curdir=getwd())
+save(envlist,file=paste("../Modelruns/",RUN_ID,"__RUN_INFO.RData",sep=""));rm(envlist)
+
+###########
+## SLOW
+system(matlabcli, input= cli_input)
+###########
+
+
+#Read results files
 results=data.frame()
+setwd("../Modelruns")
+files=dir(pattern=".*_MEMLS.txt")
 
-for(m in seq(0.05,1,length=20)){
-	for(q in seq(0.1,0.3,length=20)){
-for(i in 1:nrow(sweobs)){
-	pit=sweobs[i,]
-	print(pit)
-	pitfilename=paste(c(row.names(pit),"_L1",".txt"),collapse="")
-	soilfilename=gsub("\\.txt","_soil.txt",pitfilename)
-	#Layer#, layerTemp (K), Vol LWC (0-1), PDSW (kg/m3), thickness (cm), salinity (ppthousand), exp corr len (mm) 
-	#pit=read.table(pitfilename,sep=" ")
-	#soil=read.table(soilfilename,sep=" ")
-	
-	outfilename=gsub("\\.txt","_MEMLS3a_VV.txt",pitfilename)
-	
-	matlabcli=paste("/Applications/MATLAB_R2014a.app/bin/matlab -nodisplay -nosplash -nodesktop -r \"cd('~/Documents/School/Projects/MEMLS/MEMLS3&a');run_MEMLS_Active_v2_External('|pitfile|','|soilfile|','|outfile|',|freq|,|theta|,|m|,|q|,|database|);exit;\"",sep="")
-	command=gsub("|pitfile|",pitfilename,matlabcli,fixed=T)
-	command=gsub("|soilfile|",soilfilename,command,fixed=T)
-	command=gsub("|outfile|",outfilename,command,fixed=T)
-	command=gsub("|freq|",paste(freq,collapse=","),command,fixed=T)
-	command=gsub("|theta|",paste(theta,collapse=","),command,fixed=T)
-	command=gsub("|m|",m,command,fixed=T)
-	command=gsub("|q|",q,command,fixed=T)
-	command=gsub("|database|",0,command,fixed=T)
-	
-	cat(command)
-	
-	system(command)
-	
+for(outfilename in files){
 	MEMLSresults=read.csv(outfilename, header=F)
-	names(MEMLSresults)=c("freq","theta","s0h", "s0v", "ss0h", "ss0v", "rv","rh","rdv","rdh","rsv","rsh","rs0","sigma0vv","sigma0hh","sigma0hv","Tbv","Tbh")
+	names(MEMLSresults)=c("ModelVersion","ModelDate","nLayers","freq","theta","soil.meanslope","Xpol.frac","sccho","snow.T1","snow.density","soil.T","soil.mv","soil.rough","s0h", "s0v", "ss0h", "ss0v", "rv","rh","rdv","rdh","rsv","rsh","rs0","sigma0vv","sigma0hh","sigma0hv","Tbv","Tbh")
 	MEMLSresults$m=m
 	MEMLSresults$q=q
 	MEMLSresults=data.frame(pit,MEMLSresults)
 	results=rbind(results,MEMLSresults)
-}
-}
-}
+	}
+
+
+
 results$modelver="VerGIT"
 results$model="MEMLS3a"
 results$modelRunDate=Sys.time()
 results$simvar1=results$simvar2="none"
 results$nlayer=1
 save(results,file=paste("Results_",format(Sys.time(), "%Y_%m_%d__%H_%M"),".Rdata",sep=""))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
