@@ -40,11 +40,67 @@ load('~/Documents/School/Projects/Paper-PeatModel/PAPER/AGU2012/mironovSims/pitf
 #This builds the following files:
 #allsweobs=read.csv("~/Documents/School/Projects/Paper-PeatModel/PAPER/AGU2012/mironovSims/pitfiles/allsweobs.csv")
 
+
 ########################################
 ########################################
-## Build MEMLS3a inputfiles
+## Regenerate Observation files (TODO: fix inputbuilder sourcefiles)
 ########################################
 ########################################
+
+obs=loadOBSTable("~/Documents/School/Projects/Paper-Peatmodel/PAPER/AGU2012/mironovSims/results_2012-12-02_2057=AGU2012_newpit_TGNDker_coreh2o/SimOBS-ALL_FW.csv")
+
+obs=obs[!duplicated(obs),]
+
+
+
+obs=avgInc(obs)#add a value for the average sigma0 over 30--45 degrees.
+
+#For decompositions:
+#temp=expand.grid(c("g","as","v","t"),c("vv","vh","hh"),c("X","K"))
+#temp=paste(as.character(temp$Var3),as.character(temp$Var2),as.character(temp$Var1),sep="")
+#for(i in temp)
+#	obs[,i]=NA
+	
+allobs=obs
+
+obsfeb25=obs[grepl("^(25022011-15[13]0)",obs$filename),]
+obsfeb25SR=obs[grepl("^(25022011-1600)",obs$filename),]
+obsSR=obs[grepl("^(03032011-1330)",obs$filename),]
+obs=obs[!grepl("^(03032011-1330)|(25022011-)",obs$filename),]
+
+OBS=obs
+
+temp=plotSim.NRCS.vs.Date(obs,plotSIM=F)
+
+###########################
+###########################
+
+tsx=read.csv("~/Documents/School/Projects/MEMLS/MEMLS3&a/Input/Churchill/TundraTSX_jul2012.csv")
+names(tsx)=gsub("[.]","",tolower(names(tsx)))
+tsx$Date=strptime(tsx$date,"%y-%m-%d")
+TSXmean=data.frame(date=unique(tsx$date),Date=unique(tsx$Date),vv2x2=NA,vv3x3=NA,vh2x2=NA,vh3x3=NA)
+for(i in 1:nrow(TSXmean)){
+	for(j in names(TSXmean)[3:6])
+	TSXmean[i,j]=mean(tsx[tsx$date==TSXmean[i,"date"],j],na.rm=T)
+}
+
+
+tsx3x3=function(){
+	tsxtundra<<-TSXmean[,c("Date","date","vv3x3","vh3x3")]
+	names(tsxtundra)<<-c("Date","date","Xvv","Xvh")
+}
+
+tsx2x2=function(){
+	tsxtundra<<-TSXmean[,c("Date","date","vv2x2","vh2x2")]
+	names(tsxtundra)<<-c("Date","date","Xvv","Xvh")
+}
+tsx2x2()
+tsx3x3()
+
+
+###########################
+###########################
+
 
 allsweobs=data.frame(date="s",Date=strptime("19990101-0000","%Y%m%d-%H%M"),sweA=1,sweB=1,sweE=1,sweT=1,tgnd=1,tair=1,tsnow=1,depthpit=1,depthmagna=1,pdsw=1,DHfrac=1,meanGS_dobs=1,meanGS_dobs_upper=1,meanGS_dobs_lower=1,sdGS_dobs_upper=1,sdGS_dobs_lower=1,soil_rough=1,file="")
 
@@ -188,6 +244,17 @@ sweobs$epsg= sapply(sweobs$Tgnd_K5lh,function(x)mironov(9.6,x,75.4/1000,0.51))
 
 sweobs=subset(sweobs, depthpit>0)
 
+
+
+
+########################################
+########################################
+## Build MEMLS3a inputfiles
+########################################
+########################################
+
+
+
 ######################################
 ##OneLayer
 for(i in 1:nrow(sweobs)){
@@ -218,7 +285,7 @@ RUN_ID=round(as.numeric(Sys.time()))
 matlabcli="/Applications/MATLAB_R2014a.app/bin/matlab -nodisplay -nosplash -nodesktop -r \"cd('~/Documents/School/Projects/MEMLS/MEMLS3&a');\""
 cli_input=""
 for(s in MEMLS_sccho[10]){
-	for(m in seq(0.05,1,length=3)){
+	for(m in seq(0.05,0.1,length=3)){
 		for(q in seq(0.1,0.3,length=3)){
 			for(i in 1:nrow(sweobs)){
 				pit=sweobs[i,]
@@ -275,13 +342,14 @@ for(outfilename in files){
 	MEMLSresults=read.csv(outfilename, header=F)
 	names(MEMLSresults)=c("ModelVersion","ModelVersionDate","nlayer","freq","theta","soil.meanslope","Xpol.frac","sccho","snow.T1","snow.density","soil.T","soil.mv","soil.rough","s0h", "s0v", "ss0h", "ss0v", "rv","rh","rdv","rdh","rsv","rsh","rs0","sigma0vv","sigma0hh","sigma0hv","Tbv","Tbh")
 	MEMLSresults$run_id=as.numeric(gsub("^([[:digit:]]+)_.*","\\1", outfilename))
-	MEMLSresults$m=m
-	MEMLSresults$q=q
 	
 	pit=sweobs[rownames(sweobs)==gsub("(.*?__)(.*?)(_L._MEMLS.txt)","\\2",outfilename),]
 	MEMLSresults=data.frame(pit,MEMLSresults)
 	results=rbind(results,MEMLSresults)
 	}
+
+
+
 
 getRunInfo=function(resultsFileName){
 	run_id=as.numeric(gsub("^([[:digit:]]+)_.*","\\1", resultsFileName))
@@ -312,52 +380,349 @@ newdata=cbind(newdataX[,!grepl("X[vh]{2}",names(newdataX))],newdataX[,grepl("X[v
 newdata$key=NULL
 
 
+#Add in Obs
+obs$file=obs$filename
+for(i in names(obs))if(any(class(obs[,i])=="factor")){print(i);obs[,i]=as.character(obs[,i])} 
 
-plotSim.NRCS.vs.Date(newdata,plotOBS=F,plotOBSavg=F,simModel="MEMLS",simModelVer="VerGIT",varname="m")
-plotSim.NRCS.vs.Inc.byDate(newdata,plotOBS=F,plotOBSavg=F,simModel="MEMLS",simModelVer="VerGIT")
-
-
-
-
-
-plotNRCS_date=function(data,dates=NA){
-	
+for(i in names(sweobs)[!names(sweobs)%in%names(obs)]) obs[,i]=NA
+for(i in 1:nrow(sweobs)){
+	pit=sweobs[i,]
+	obs[format(obs$Date,"%Y-%j")==substr(rownames(pit),1,8),names(sweobs)]=pit
 }
+obs$soil.T=obs$Tgnd_K5lh #or obs$tgnd
+#obs$soil.mv =obs$soilWVF
+#obs$epsg =complex(obs$)
+obs$soil.rough =obs$soil_rough
+obs$snow.T1 =obs$tsnow
+obs$snow.density =obs$pdsw
+obs$soil.meanslope =obs$soil_rough
 
 
-plotNRCS=function(data,mode=c("date","inc")){
+
+for(i in names(newdata)[!names(newdata)%in%names(obs)]) obs[,i]=NA
+obs=obs[,names(newdata)]
+newdata=rbind(obs,newdata)
+
+#Convert appropriate vars to factors:
+for(i in c("file","inc"))newdata[,i]=factor(newdata[,i])
+
+plotSim.NRCS.vs.Date(newdata,plotOBS=T,plotOBSavg=F,simModel="MEMLS",simModelVer="VerGIT",varname="m")
+#plotSim.NRCS.vs.Inc.byDate(newdata,plotOBS=F,plotOBSavg=F,simModel="MEMLS",simModelVer="VerGIT")
+
+
+
+#data=subset(newdata, Xpol.frac==0.2 & soil.meanslope==0.05) #for testing plotting functions, equiv to: plotNRCS(subset(data, Xpol.frac==0.2 & soil.meanslope==0.05),X="date",Y="dB",Z="FreqPol",plotGroup="MEMLS")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+plotNRCS=function(data,X=c("date","inc"),Y=c("dB"),Z=c("FreqPol","date"),ylim=c(-30,5),plotGroup=c("OBS","ALLSIM"), plotLegend=T){
 	#
 	
 	#Assumptions: 
+	stopifnot(Y=="dB")
 	
 	###############
 	##	SETUP WINDOW
-	if(mode=="date"){
-		MIN_DATE=round(min(results$Date),units="days")
-		MAX_DATE=round(max(results$Date),units="days")
-		DATE_RANGE=seq(from= MIN_DATE,to= MAX_DATE,"days")
+
+	if(Z=="FreqPol"){
+		FREQPOL=grep("[XK][vh]{2}",names(data),value=T)
+		NWINDOW= length(FREQPOL) #Number of panels in window. Track so we can add to the plot
+		NWINDOW_R= floor(sqrt(NWINDOW))
+		NWINDOW_C=ceiling(NWINDOW/NWINDOW_R) #prefer extra to be made up in columns.
 		
-		NWINDOW= length(unique(data$Date)) #Number of panels in window. Track so we can add to the plot
-		NWINDOW_C=NWINDOW_R= floor(sqrt(NWINDOW))+1
-		par(mfrow=c(NWINDOW_R,NWINDOW_C))
+		par(mfrow=c(NWINDOW_R,NWINDOW_C)) #draw by rows, nr * nc
 		
+		LEGEND_LOC="bottomright"
+	}
+	if(Z=="date"){
+		stop()
+		title=paste("NRCS ", format(DATES[i],"%Y-%m-%d"),sep="")
+	}
+	
+	plotlist=list(X=X,Y=Y,Z=Z, NWINDOW= NWINDOW, NWINDOW_R= NWINDOW_R, NWINDOW_C= NWINDOW_C, LEGEND_LOC= LEGEND_LOC)
+	
+	NWINDOW_LIST=data.frame(title="",r=NA,c=NA)
+	
+	if(X=="date"){
+		plotlist$MIN_X=MIN_DATE=round(min(results$Date),units="days")
+		plotlist$MAX_X=MAX_DATE=round(max(results$Date),units="days")
+		plotlist$X_RANGE=DATE_RANGE=as.Date(seq(from= MIN_DATE,to= MAX_DATE,"days"))
+		plotlist$X_VALS=DATES=as.Date(sort(unique(round(data$Date,units="days"))))
+		plotlist$xlim=xlim=as.Date(c(MIN_DATE,MAX_DATE))
+				
 		#Draw empty plots
-		NWINDOW_LIST=""
+		
 		for(i in 1:NWINDOW){
+			title=paste("NRCS (",FREQPOL[i],")",sep="")
 			
+			
+			#Setup plot frame
+			plot(DATES,rep(10,len=length(DATES)),ylim=ylim,xlim= xlim,type="l",col="white",xlab="Date",ylab=paste("Response (dB)"),main=title)
+			NWINDOW_LIST[i,]=data.frame(title,par("mfg")[1],par("mfg")[2])#must be after plot so mfg is current.
+			
+			#add grid lines
+			abline(v=as.Date(seq(from= MIN_DATE, to= MAX_DATE,"months")), lty="dotted", col="lightgrey",lwd=0.7)
 		}
 		
-		plot(dates,rep(10,length(dates)),ylim=ylim,type="l" ,col="white",main=paste(freqpol[i,]$varname,moretitle,sep=""),xlab="Date",ylab=paste("Response (dB)"))#,panel.first=grid(nx=5), xaxt="n")
 
-		abline(h=seq(-30,0,by=5), v=seq(from=as.Date("2010-11-01"), to=as.Date("2011-03-03"),"months"), lty="dotted", col="lightgrey",lwd=0.7)
-	}
-	if(mode=="inc"){
 		
 	}
 	
 	
-	invisible(par)
+	if(X=="inc"){
+		stop()
+	}
+	
+	plotlist$NWINDOW_LIST= NWINDOW_LIST
+	
+	if(Y=="dB"){
+		for(xi in 1:NWINDOW_C)
+			for(yi in 1:NWINDOW_R){
+			par(mfg=c(yi,xi))
+			#add grid lines
+			abline(h=seq(-30,0,by=5), lty="dotted", col="lightgrey",lwd=0.7)
+		}
+	MIN_Y =plotlist$MIN_Y=min(ylim)
+	MAX_Y =plotlist$MAX_Y=max(ylim)
+	Y_VALS =plotlist$Y_VALS=Y_RANGE =plotlist$Y_RANGE=seq(MIN_Y,MAX_Y,by=1)
+	
+	plotlist$ylim=ylim
+	}
+	
+	
+	
+	
+	#########################
+	## Plot OBS/SIM
+	if(any(plotGroup=="ALLSIM")){
+		plotGroup=unique(c(plotGroup,unique(data$model)[unique(data$model)!="OBS"]))
+		plotGroup=sort(plotGroup[plotGroup!="ALLSIM"])
+		}
+	
+	if(any(grepl("OBSALL:",plotGroup))){
+				plotGroup=gsub("OBSALL","obs_narrow",plotGroup)
+				plotGroup=c(plotGroup[grepl("obs_narrow",plotGroup)],gsub("narrow","flood", plotGroup[grepl("obs_narrow",plotGroup)]),plotGroup[!grepl("obs",plotGroup)])
+				}
+	
+	legend=NULL
+	for(datagroup in plotGroup){
+		plotdata=NA
+		
+		### Attend to slicing plotGroup's
+		if(grepl("OBS",datagroup)){
+			if(grepl("OBS:N",datagroup)){
+				datagroup=gsub("OBS","obs_narrow",datagroup)
+				}else if(grepl("OBS:F",datagroup)){
+				datagroup=gsub("OBS","obs_flood",datagroup)
+				}else{
+				datagroup=gsub("OBS","obs_narrow",datagroup)
+			}
+		}
+		if(grepl(".*VAR:.*", datagroup)){ #eg. "MEMLS:VAR:incidence@39"
+			#Has @:
+			if(grepl("@", datagroup)){
+				#Draw the trace at this value of VAR
+				trace=gsub("^(.*?@)(.+)$","\\2", datagroup)
+				datagroup =gsub("(.*?)(@.+)$","\\1", datagroup)
+			}
+			#Has :*scale:
+			if(grepl(".*?VAR:[[:alpha:]]+:.*$", datagroup)){
+				varscale=gsub("(.*?VAR:)(.+?):(.+)","\\2", datagroup)
+			}else{
+				varscale=F
+				datagroup=gsub("VAR:","VAR:noscale:",datagroup)#so var=.. can be consistant
+			}
+			
+			var=gsub("(.*?VAR:)(.+?):(.*)","\\3", datagroup)
+			
+			datagroup=gsub("(.*?)(:VAR:)(.+)","\\1", datagroup)
+			plotNRCS.addGroup(subset(data,model==datagroup),plotlist,drawRange=T) #plot ranges, no line, no legend
+			plotdata=subset(data,as.character(data[,var])==trace & model==datagroup)
+			}
+		
+		
+		if(grepl("FIELD:.+",datagroup)){
+			if(X!="date"){warning("Asked to plot ",datagroup," but X axis is not date. Skipping.");next}
+			var=gsub("(FIELD:)(.+)(:.*)","\\2", datagroup)
+			
+
+			plotdata=subset(data,model=="obs_narrow")
+			plotdata$model=var
+		}
+		
+		
+		if(is.null(nrow(plotdata)))plotdata=subset(data,model==datagroup)
+		
+		## Plot this group
+		sty=plotNRCS.addGroup(plotdata,plotlist)
+		legend =rbind(legend,sty)
+	}
+
+	
+	#########################
+	##	LEGEND
+	
+	if(plotLegend)
+		legend(x=LEGEND_LOC,legend=paste(legend$disp, legend $note,sep=" "),lty= legend $lty,pch= legend $pch,pt.lwd= legend $lwd,bg="white",cex=1,pt.bg="black",col= legend $col, horiz=T)#draw legend
+	
+
+	#########################	
+	##	Return plotting structure so other plots can be overlaid.
+	invisible(plotlist)
 }
+
+
+
+
+
+
+
+
+
+
+
+plotNRCS.addGroup=function(data,plotlist, drawRange=list(F,T,"logscale","linscale" )  ){
+
+	stopifnot(plotlist$Y=="dB")
+	
+	rangeFactor=function(x)1 #default value, scale CEX to be unscaled.
+	
+	switch(class(drawRange), list={drawRange=F}, logical=drawRange, character={rangeFactor=switch(drawRange, logscale=function(x){normalize(data=log(1+x/min(x+1))/(2*max((log(1+x/min(x+1))))),ylim=c(0.1,1.3),datarange=c(0.1,1.3))}, linscale=function(x){normalize(data=x/max(2*x,na.rm=T),ylim=c(0.1,1.3),datarange=c(0.1,1.3))}  );drawRange=T}, `function`={rangeFactor=drawRange;		drawRange=T},stop())
+
+	#print(drawRange)
+
+	#For consistent plotting styles within this func. #var=""; sty=style[which(style$name==var),]; plot...(sty$pch, etc.) ;; style=edit(style);dput(style)
+	style= structure(list(name = c("obs_flood", "obs_narrow", "SRT", "TSX", 
+"SWE", "DHF", "RHOS", "GZ", "TGND", "SRTg", "SRTas", "SRTv", 
+"EPSG.Re", "EPSG.Im", "MEMLS", "TSANG", "DMRTML", "TSNOW"), disp = c("Obs. Flood", 
+"Obs. Narrow", "sRT", "TSX", "SWE", "Depth Hoar frac.", "Snow density", 
+"Grain size", "Temperature:GND", "s0:ground", "s0:air-snow", 
+"s0:snow vol", "Soil.permittivity (Real)", "Soil.permittivity (Imag.)", 
+"MEMLS", "DMRT-QMS-ML (LACEO)", "DMRT-ML (LGGE)", "Temperature:Snow"
+), note = c("(dB)", "(dB)", "(dB)", "(dB)", " (mm)", " (%)", 
+" (g/cm3)", " (mm)", "(C)", "(dB)", "(dB)", "(dB)", "", "", "(dB)", 
+"(dB)", "(dB)", "(C)"), lty = c("dashed", "12", "solid", "solid", 
+"dotdash", "dotdash", "dotdash", "dotted", "dotted", "solid", 
+"solid", "solid", "dotted", "dotted", "solid", "solid", "solid", 
+"dotted"), pch = c(0, 7, 22, 1, 1, 9, 8, 10, 3, 2, 6, 5, 10, 
+9, 22, 22, 22, 3), lwd = c(1, 1, 1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 
+0.8, 0.8, 0.8, 0.5, 0.5, 1, 1, 1, 0.5), col = c("grey", "grey", 
+"black", "grey", "red", "green", "cyan", "orange", "darkgreen", 
+"black", "black", "black", "darkgreen", "darkgreen", "black", 
+"black", "black", "lightgreen"), cex = c(0.5, 0.5, 0.8, 0.8, 
+0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.5, 0.5, 0.8, 0.8, 0.8, 
+0.8), type = c("b", "b", "b", "b", "b", "b", "b", "b", "b", "b", 
+"b", "b", "b", "b", "b", "b", "b", "b"), norm_min = c(NA, NA, 
+NA, NA, "0", "0", ".1", ".2", "0", NA, NA, NA, "0", "0", NA, 
+NA, NA, "0"), norm_max = c(NA, NA, NA, NA, "50", "1", ".3", "4", 
+"50", NA, NA, NA, "6", "3", NA, NA, NA, "50"), bg = c("", "", 
+"green", "", "", "", "", "", "", "", "", "", "", "", "red", "cyan", 
+"yellow", ""), var = c("", "", "", "", "sweT", "DHfrac", "pdsw", 
+"meanGS_dobs", "Tgnd_K5lh", "", "", "", "epsg", "epsg", "", "", 
+"", "tsnow")), .Names = c("name", "disp", "note", "lty", "pch", 
+"lwd", "col", "cex", "type", "norm_min", "norm_max", "bg", "var"
+), row.names = c(NA, 18L), class = "data.frame")
+
+
+	
+	sty=style[style$name==unique(data$model),]
+	if(drawRange & sty$type!="p"){
+		sty$type="p"
+	}else if (drawRange==F & sty$type=="p"){
+		print("force style:type:b")
+		sty$type="b"
+	}
+	for(zi in 1:plotlist$NWINDOW){
+		title=plotlist$NWINDOW_LIST[zi,'title']
+		par(mfg=c(plotlist$NWINDOW_LIST[zi,'r'],plotlist$NWINDOW_LIST[zi,'c'])) #Set plot sub-window
+
+		if(plotlist$Y=="dB")
+			if(sty$note=="(dB)"){#plotting obs/sim
+			yvar=gsub("(NRCS .)([XK][vh]{2})(.+)","\\2",title)
+			}else{#plotting field measurements
+				newdata=NULL
+				for(i in plotlist$X_VALS){
+					newdata=rbind(newdata,data[data[,plotlist$X]==i,][1,])#grab one copy of data[] for each Xval.
+				}
+				data=newdata
+				yvar=sty$var
+				}
+		
+		
+		if(plotlist$X=="date"){
+			xvar="Date"
+			data$Date=as.Date(data$Date)
+			}
+		if(drawRange & !is.na(sty$norm_min)){
+			yvals=normalize(data[,yvar],datarange=c(sty$norm_min,sty$norm_max),ylim=plotlist$ylim)
+			}
+		else{
+			yvals=data[,yvar]
+			}
+		
+		if(any(is.complex(yvals))){
+			if(grepl("Im",yvar)){
+				yvals=Im(yvals)
+			}else{
+				yvals=Re(yvals)
+			}
+			
+		}
+		if(all(is.na(yvals))){print(paste("No Yvals:",title));stop();next;}
+
+		points(yvals~data[,xvar],lty=sty$lty,lwd=sty$lwd,col=sty$col,cex=ifelse(rep(drawRange,length(yvals)),rangeFactor(yvals),1)*sty$cex,pch=sty$pch,type=sty$type)
+		#title(sub=paste("subplot: ",paste(plotlist$NWINDOW_LIST[zi,],collapse=" ")))
+				
+			#if(title=="NRCS (Kvv)")stop()
+			
+			}
+	invisible(sty) #for legend plotting.
+
+}
+
+
+
+#testing:
+if(F){
+	####all these should plot successfully...
+	
+	#Test plotting Sims: MEMLS
+	temp=plotNRCS(subset(newdata, Xpol.frac==0.2 & soil.meanslope==0.05 & incidence ==39), X="date", Y="dB", Z="FreqPol", plotGroup="MEMLS")
+	temp=plotNRCS(subset(newdata, Xpol.frac==0.2 & soil.meanslope==0.05 ), X="date", Y="dB", Z="FreqPol", plotGroup="MEMLS")#with no @ specified, will be messy.
+	temp=plotNRCS(subset(newdata, Xpol.frac==0.2 & soil.meanslope==0.05 ), X="date", Y="dB", Z="FreqPol", plotGroup="MEMLS:VAR:incidence@39")
+	temp=plotNRCS(subset(newdata, Xpol.frac==0.2 & soil.meanslope==0.05 ), X="date", Y="dB", Z="FreqPol", plotGroup="MEMLS:VAR:logscale:incidence@39")
+	temp=plotNRCS(subset(newdata, Xpol.frac==0.2 & soil.meanslope==0.05 ), X="date", Y="dB", Z="FreqPol", plotGroup="MEMLS:VAR:linscale:incidence@39")
+	
+	#test plotting obs
+	temp=plotNRCS(subset(newdata, (Xpol.frac==0.2 & soil.meanslope==0.05 | grepl("obs",model))&incidence==39), X="date", Y="dB", Z="FreqPol", plotGroup="OBS")
+	temp=plotNRCS(subset(newdata, (Xpol.frac==0.2 & soil.meanslope==0.05 | grepl("obs",model))&incidence==39), X="date", Y="dB", Z="FreqPol", plotGroup=c("MEMLS","OBS"))
+	temp=plotNRCS(subset(newdata, Xpol.frac==0.2 & soil.meanslope==0.05 & incidence==39 | grepl("obs",model)), X="date", Y="dB", Z="FreqPol", plotGroup=c("OBS:VAR:incidence@39","MEMLS"))
+	
+	#test plotting overlays
+	temp=plotNRCS(subset(newdata, Xpol.frac==0.2 & soil.meanslope==0.05 | grepl("obs",model) ), X="date", Y="dB", Z="FreqPol", plotGroup="FIELD:SWE:")
+	}
+
+
+
+
+
+
+
 
 
 
@@ -411,7 +776,7 @@ plotSim.NRCS.vs.Date=function(bigtable, writePDF=F,varname="none",plotSWE=F,plot
 		##Plot SWE
 		if(plotSWE){
 			var="SWE";s=style[which(style$name==var),]
-				points(sweobs$Date,normalize(sweobs$sweT,datarange=c(0,50),ylim=ylim),type="b",pch=s$pch,cex=s$cex,lwd=s$lwd,lty=s$lty,col=s$col)
+				points(sweobs$Date,normalize(sweobs$sweT,datarange=c(0,50),ylim=ylim),type="b",pch=sty$pch,cex=sty$cex,lwd=sty$lwd,lty=sty$lty,col=sty$col)
 			at=axTicks(4)
 			at.l=as.character(paste(round(seq(0,50,length=length(at)),0),"")) 
 			axis(4,at,labels=at.l)
@@ -420,38 +785,38 @@ plotSim.NRCS.vs.Date=function(bigtable, writePDF=F,varname="none",plotSWE=F,plot
 		##Plot DHF
 		if(plotDHF){
 			var="DHF";s=style[which(style$name==var),]
-				points(as.Date(sweobs$Date),normalize(sweobs$DHfrac,datarange=c(0,1),ylim=ylim),pch=s$pch,cex=s$cex,type="b",lwd=s$lwd,lty=s$lty,col=s$col)
+				points(as.Date(sweobs$Date),normalize(sweobs$DHfrac,datarange=c(0,1),ylim=ylim),pch=sty$pch,cex=sty$cex,type="b",lwd=sty$lwd,lty=sty$lty,col=sty$col)
 		}
 		
 		##Plot Density
 		if(plotRHO){
 			var="RHOS";s=style[which(style$name==var),]
-				points(as.Date(sweobs$Date),normalize(sweobs$pdsw,datarange=c(0.1,0.3),ylim=ylim),pch=s$pch,cex=s$cex,type="b",lwd=s$lwd,lty=s$lty,col=s$col)
+				points(as.Date(sweobs$Date),normalize(sweobs$pdsw,datarange=c(0.1,0.3),ylim=ylim),pch=sty$pch,cex=sty$cex,type="b",lwd=sty$lwd,lty=sty$lty,col=sty$col)
 		}
 		
 		##Plot Grain size
 		if(plotGZ){
 			var="GZ";s=style[which(style$name==var),]
-				points(as.Date(sweobs$Date),normalize(sweobs$meanGS_dobs,datarange=c(0.2,4),ylim=ylim),pch=s$pch,cex=s$cex,type="b",lwd=s$lwd,lty=s$lty,col=s$col)
+				points(as.Date(sweobs$Date),normalize(sweobs$meanGS_dobs,datarange=c(0.2,4),ylim=ylim),pch=sty$pch,cex=sty$cex,type="b",lwd=sty$lwd,lty=sty$lty,col=sty$col)
 		}
 		
 		##Plot Temperature:GND
 		if(plotTGND){
 			var="TGND";s=style[which(style$name==var),]
-				points(as.Date(sweobs$Date),normalize(abs(sweobs$tgnd),ylim=ylim,datarange=c(0,30),invert=T),pch=s$pch,cex=s$cex,type="b",lwd=s$lwd,lty=s$lty,col=s$col)
+				points(as.Date(sweobs$Date),normalize(abs(sweobs$tgnd),ylim=ylim,datarange=c(0,30),invert=T),pch=sty$pch,cex=sty$cex,type="b",lwd=sty$lwd,lty=sty$lty,col=sty$col)
 		}
 		if(plotEPSG){
 			var="EPSGr";s=style[which(style$name==var),]
-				points(as.Date(sweobs$Date),normalize(abs(Re(sweobs$epsg)),ylim=ylim,datarange=c(0,6),invert=T),pch=s$pch,cex=s$cex,type="b",lwd=s$lwd,lty=s$lty,col=s$col)
+				points(as.Date(sweobs$Date),normalize(abs(Re(sweobs$epsg)),ylim=ylim,datarange=c(0,6),invert=T),pch=sty$pch,cex=sty$cex,type="b",lwd=sty$lwd,lty=sty$lty,col=sty$col)
 			var="EPSGi";s=style[which(style$name==var),]
-				points(as.Date(sweobs$Date),normalize(abs(Im(sweobs$epsg)),ylim=ylim,datarange=c(0,2),invert=T),pch=s$pch,cex=s$cex,type="b",lwd=s$lwd,lty=s$lty,col=s$col)
+				points(as.Date(sweobs$Date),normalize(abs(Im(sweobs$epsg)),ylim=ylim,datarange=c(0,2),invert=T),pch=sty$pch,cex=sty$cex,type="b",lwd=sty$lwd,lty=sty$lty,col=sty$col)
 		}
 		
 		##Plot TSX
 		if(exists("tsxtundra")& grepl("[xX]",freqpol[i,"var"]) & plotTSX){
 			var="TSX";s=style[which(style$name==var),]
-				points(as.Date(tsxtundra$Date), tsxtundra[,freqpol[i,]$var],pch=s$pch,type="p",ylim=c(-30,5),col=s$col,cex=s$cex,lwd=s$lwd) #hollow circle
-				points(as.Date(tsxtundra$Date), tsxtundra[,freqpol[i,]$var],pch=s$pch,type="l",ylim=c(-30,5),col=s$col,cex=s$cex,lwd=s$lwd) #hollow circle
+				points(as.Date(tsxtundra$Date), tsxtundra[,freqpol[i,]$var],pch=sty$pch,type="p",ylim=c(-30,5),col=sty$col,cex=sty$cex,lwd=sty$lwd) #hollow circle
+				points(as.Date(tsxtundra$Date), tsxtundra[,freqpol[i,]$var],pch=sty$pch,type="l",ylim=c(-30,5),col=sty$col,cex=sty$cex,lwd=sty$lwd) #hollow circle
 			}else{plotTSX=F}#if no TSX, don't include in legend.
 		
 		##Plot OBS
@@ -462,15 +827,15 @@ plotSim.NRCS.vs.Date=function(bigtable, writePDF=F,varname="none",plotSWE=F,plot
 						y=subset(bigtable,modelver=="obs" & model=="obs_narrow" & incidence==iinc)
 						s$col=rainbow(n=81,start=0.1)[iinc]
 							}
-					points(as.Date(y[!is.na(y[,freqpol[i,]$var]),]$Date),y[!is.na(y[,freqpol[i,]$var]),freqpol[i,]$var],pch=s$pch,type="b",ylim=c(-30,5),bg=freqpol[i,"col"],col=s$col,lty=s$lty,lwd=s$lwd,cex=s$cex)#ifelse(length(INC)==1,s$col,pal[iinc])
+					points(as.Date(y[!is.na(y[,freqpol[i,]$var]),]$Date),y[!is.na(y[,freqpol[i,]$var]),freqpol[i,]$var],pch=sty$pch,type="b",ylim=c(-30,5),bg=freqpol[i,"col"],col=sty$col,lty=sty$lty,lwd=sty$lwd,cex=sty$cex)#ifelse(length(INC)==1,s$col,pal[iinc])
 					}
 			}
 		
 		##Plot Sim
 		if(plotSIM){
 		var="SRT";s=style[which(style$name==var),]
-			lines(as.Date(sims$Date), sims[,freqpol[i,]$var],ylim=c(-30,5),col=s$col,lwd=s$lwd)
-			points(as.Date(sims$Date), sims[,freqpol[i,]$var],pch=s$pch,type="p",ylim=c(-30,5),col=s$col,bg=freqpol[i,"col"],cex=s$cex)
+			lines(as.Date(sims$Date), sims[,freqpol[i,]$var],ylim=c(-30,5),col=sty$col,lwd=sty$lwd)
+			points(as.Date(sims$Date), sims[,freqpol[i,]$var],pch=sty$pch,type="p",ylim=c(-30,5),col=sty$col,bg=freqpol[i,"col"],cex=sty$cex)
 		
 		##Plot Decomposed Sim values
 		if(plotSIMdeco){
@@ -478,14 +843,14 @@ plotSim.NRCS.vs.Date=function(bigtable, writePDF=F,varname="none",plotSWE=F,plot
 			p=ifelse(grepl("vv",freqpol[i,]$var),"vv","vh")
 						
 			var="SRTg";s=style[which(style$name==var),]
-			points(as.Date(sims$Date),sims[,paste(f,p,"g",sep="")],pch=s$pch,type="b",ylim=c(-30,5),bg=freqpol[i,"col"],col=s$col,lty=s$lty,lwd=s$lwd,cex=s$cex)
+			points(as.Date(sims$Date),sims[,paste(f,p,"g",sep="")],pch=sty$pch,type="b",ylim=c(-30,5),bg=freqpol[i,"col"],col=sty$col,lty=sty$lty,lwd=sty$lwd,cex=sty$cex)
 			
 			var="SRTas";s=style[which(style$name==var),]
-			points(as.Date(sims$Date),sims[,paste(f,p,"as",sep="")],pch=s$pch,type="b",ylim=c(-30,5),bg=freqpol[i,"col"],col=s$col,lty=s$lty,lwd=s$lwd,cex=s$cex)
+			points(as.Date(sims$Date),sims[,paste(f,p,"as",sep="")],pch=sty$pch,type="b",ylim=c(-30,5),bg=freqpol[i,"col"],col=sty$col,lty=sty$lty,lwd=sty$lwd,cex=sty$cex)
 			#style=style[style$name!="SRTas",]#clip out as we are not using it.
 			
 			var="SRTv";s=style[which(style$name==var),]
-			points(as.Date(sims$Date),sims[,paste(f,p,"v",sep="")],pch=s$pch,type="b",ylim=c(-30,5),bg=freqpol[i,"col"],col=s$col,lty=s$lty,lwd=s$lwd,cex=s$cex)
+			points(as.Date(sims$Date),sims[,paste(f,p,"v",sep="")],pch=sty$pch,type="b",ylim=c(-30,5),bg=freqpol[i,"col"],col=sty$col,lty=sty$lty,lwd=sty$lwd,cex=sty$cex)
 	
 				
 			}
