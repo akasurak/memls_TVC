@@ -569,6 +569,7 @@ plotNRCS=function(data,X=c("date","inc"),Y=c("dB"),Z=c("FreqPol","date"),ylim=c(
 	
 	legend=NULL
 	for(datagroup in plotGroup){
+		datagroupRaw=datagroup
 		plotdata=NA
 		
 		### Attend to slicing plotGroup's
@@ -592,48 +593,62 @@ plotNRCS=function(data,X=c("date","inc"),Y=c("dB"),Z=c("FreqPol","date"),ylim=c(
 			#Has @:
 			if(grepl("@", datagroup)){
 				#Draw the trace at this value of VAR
-				trace=gsub("^(.*?@)(.+)$","\\2", datagroup)
-				datagroup =gsub("(.*?)(@.+)$","\\1", datagroup)
+				
+				#Has @AVG<#-#>
+				if(grepl("VAR:.*?@AVG", datagroup)){
+					
+					#draw the trace at this average value
+					#eg datagroup="MEMLS:VAR:noscale:incidence:AVG<33-45>"
+					avgstart=as.numeric(gsub(".*?@AVG<([[:digit:]]+)-([[:digit:]]+)>","\\1", datagroup))
+					avgstop=as.numeric(gsub(".*?@AVG<([[:digit:]]+)-([[:digit:]]+)>","\\2", datagroup))
+					
+					modelgroup=gsub("(.*?)(:VAR:)(.+)","\\1", datagroup)
+					datagroup=gsub("(.*?)(:.*?)@AVG.*","\\1_AVG\\2",datagroup)
+					trace=gsub(".*?VAR:(.*?scale:)?(.+?)(:.*)?","\\2", datagroup)
+					
+	
+					plotdata =data[data[, trace]>=avgstart & data[, trace]<=avgstop & data$model== modelgroup,]
+					if(plotlist$X=="date"){
+						temp =nlme::gsummary(plotdata,form=~model/as.character(Date),FUN=list(character=function(x)names(summary(as.factor(x)))[1]))
+						temp2=nlme::gsummary(plotdata,form=~model/as.character(Date), FUN=list(numeric=function(x)dbfun(x,mean, na.rm=T),character=function(x)names(summary(as.factor(x)))[1]))	
+						}else{
+							stop()
+							temp =nlme::gsummary(plotdata,form=~model/as.character(Date),FUN=list(character=function(x)names(summary(as.factor(x)))[1]))
+							temp2=nlme::gsummary(plotdata,form=~model/as.character(Date), FUN=list(numeric=function(x)dbfun(x,mean, na.rm=T),character=function(x)names(summary(as.factor(x)))[1]))
+							}
+					
+					
+					plotdata=data.frame(temp[,!grepl("[XK][vh]{2}",names(temp))],temp2[,grepl("[XK][vh]{2}",names(temp))])
+					plotdata[,trace]=999
+					plotdata$model=paste(modelgroup,"_AVG",sep="")
+					trace=999
+					data=rbind(data,plotdata)
+					
+				}else{
+					trace=gsub("^(.*?@)(.+)$","\\2", datagroup)
+					datagroup =gsub("(.*?)(@.+)$","\\1", datagroup)
+					}
+			}#end if("@")
+			else{
+				trace=NA
 			}
+			
 			#Has :*scale:
-			if(grepl(".*?VAR:[[:alpha:]]scale+:.*", datagroup)){
+			if(grepl(".*?VAR:[[:alpha:]]+scale+:.*", datagroup)){
 				varscale=gsub(".*?VAR:(.+?):.+","\\1", datagroup)
 			}else{
 				varscale=F
 				datagroup=gsub("VAR:","VAR:noscale:",datagroup)#so var=.. can be consistant
 			}
-			#eg datagroup="MEMLS:VAR:noscale:incidence:AVG<33-45>"
-			#Has :AVG(#-#)
-			if(grepl("VAR:.*?:AVG", datagroup)){
-				#draw the trace at this average value
-				avgstart=as.numeric(gsub(".*?:AVG<([[:digit:]]+)-([[:digit:]]+)>","\\1", datagroup))
-				avgstop=as.numeric(gsub(".*?:AVG<([[:digit:]]+)-([[:digit:]]+)>","\\2", datagroup))
-				
-				modelgroup=gsub("(.*?)(:VAR:)(.+)","\\1", datagroup)
-				datagroup=gsub("(.*?)(:.*?):AVG.*","\\1_AVG\\2",datagroup)
-				trace=gsub("(.*?VAR:.*scale:)(.+?)(:.*)?","\\2", datagroup)
-				
-
-				plotdata =data[data[, trace]>=avgstart & data[, trace]<=avgstop & data$model== modelgroup,]
-				temp =nlme::gsummary(plotdata,form=~model/as.character(Date),FUN=list(character=function(x)names(summary(as.factor(x)))[1]))
-				
-				temp2=nlme::gsummary(plotdata,form=~model/as.character(Date), FUN=list(numeric=function(x)dbfun(x,mean, na.rm=T),character=function(x)names(summary(as.factor(x)))[1]))
-				
-				plotdata=data.frame(temp[,!grepl("[XK][vh]{2}",names(temp))],temp2[,grepl("[XK][vh]{2}",names(temp))])
-				plotdata[,trace]=999
-				plotdata$model=paste(modelgroup,"_AVG",sep="")
-				trace=999
-				data=rbind(data,plotdata)
-				
-			}
+			
 				
 			
 			var=gsub("(.*?VAR:)(.+?):(.*)","\\3", datagroup)
 			
 			datagroup=gsub("(.*?)(:VAR:)(.+)","\\1", datagroup)
 			plotNRCS.addGroup(subset(data,model==datagroup),plotlist,drawRange=T) #plot ranges, no line, no legend
-			plotdata=subset(data,as.character(data[,var])==trace & model==datagroup)
-			}
+			if(!is.na(trace))plotdata=subset(data,as.character(data[,var])==trace & model==datagroup)
+			}#end if("VAR")
 		
 		
 		if(grepl("FIELD:.+",datagroup)){
@@ -649,9 +664,13 @@ plotNRCS=function(data,X=c("date","inc"),Y=c("dB"),Z=c("FreqPol","date"),ylim=c(
 		if(is.null(nrow(plotdata)))plotdata=subset(data,model==datagroup)
 		
 		
-		if(any(duplicated(plotdata[,X])) & !grepl("FIELD:.+",datagroup)){
-			warning("Multiple Yvals for each Xval, while plotting as/with a line. Plotting once as line at FIRST value, then as range.")
-			if(X=="date")dedupe="inc" else dedupe="date"
+		if(any(duplicated(plotdata[,X])) & !grepl("FIELD:.+",datagroupRaw)){
+			warning("Multiple Yvals for each Xval, while plotting as/with a line. Plotting once as line at ???SEE FUNC??? value, then as range.")
+			if(grepl("VAR:.*?incidence",datagroupRaw)|!grepl("VAR",datagroupRaw)  ){
+				if(X=="date"){dedupe="inc"} else{ dedupe="date"}
+			}else{dedupe=gsub(".*?VAR:(.*)","\\1", datagroupRaw) }#which is the plotvar
+				
+			
 			plotNRCS.addGroup(plotdata,plotlist,drawRange=T)
 			
 			if(dedupe=="GROUPED:SOMEFUNC"){
@@ -659,12 +678,11 @@ plotNRCS=function(data,X=c("date","inc"),Y=c("dB"),Z=c("FreqPol","date"),ylim=c(
 				plotdata=nlme::gsummary(plotdata,form=formula(paste("~",X)),FUN=list(numeric=function(x)dbfun(x,mean)))
 				plotdata=plotdata[order(plotdata[,X]),]
 				}
-			
-			if(dedupe=="FIRST"){
+			else if(dedupe=="FIRST"){
 				plotdata=plotdata[match(as.Date(plotlist$X_VALS), plotdata[,X]),]
 				}
 			
-			if(dedupe=="inc"|dedupe=="date"){ #recall dedupe is opposite of X
+			else {#if(dedupe=="inc"|dedupe=="date"){ #recall dedupe is opposite of X
 				vals=unique(plotdata[,dedupe])
 				for(i in vals[-1]){
 					temp=plotdata[plotdata[,dedupe]==i,]
@@ -673,9 +691,6 @@ plotNRCS=function(data,X=c("date","inc"),Y=c("dB"),Z=c("FreqPol","date"),ylim=c(
 					}
 				plotdata=plotdata[plotdata[,dedupe]==vals[1],]
 				}
-			
-			
-			
 			}
 		
 		## Plot this group
@@ -688,7 +703,7 @@ plotNRCS=function(data,X=c("date","inc"),Y=c("dB"),Z=c("FreqPol","date"),ylim=c(
 	##	LEGEND
 	
 	if(plotLegend){
-		Horiz=ifelse(nrow(legend)<=3,T,F)#if the legend is small, go horizontal. Where 3 is arbitrary and depends on screen size, etc...
+		Horiz=ifelse(nrow(legend)<=2,T,F)#if the legend is small, go horizontal. Where 3 is arbitrary and depends on screen size, etc...
 		if(legendOnOwnPanel){
 			Horiz=F
 			plot.new()
@@ -710,12 +725,12 @@ plotNRCS=function(data,X=c("date","inc"),Y=c("dB"),Z=c("FreqPol","date"),ylim=c(
 	invisible(plotlist)
 }
 
- temp=plotNRCS(subset(newdata, (Xpol.frac==0.2 & soil.meanslope==0.05  |grepl("obs",model))), X="date", Y="dB", Z="FreqPol", plotGroup=c("MEMLS:VAR:incidence:AVG<33-45>","OBS"))
+ #temp=plotNRCS(subset(newdata, (Xpol.frac==0.2 & soil.meanslope==0.05  |grepl("obs",model))), X="date", Y="dB", Z="FreqPol", plotGroup=c("OBS","MEMLS:VAR:incidence@AVG<33-45>"))
 
 
 
 
-
+temp=plotNRCS(subset(newdata, incidence==39), X="date", Y="dB", Z="FreqPol", plotGroup=c("MEMLS:VAR:Xpol.frac","OBS","MEMLS:VAR: soil.meanslope" ))
 
 
 
@@ -804,7 +819,7 @@ style[style$bg=="","bg"]=NA#style[style$bg=="","col"]
 		par(mfg=c(plotlist$NWINDOW_LIST[zi,'r'],plotlist$NWINDOW_LIST[zi,'c'])) #Set plot sub-window
 
 		if(plotlist$Y=="dB"){
-			if(sty$note=="(dB)"){#plotting obs/sim
+			if(grepl("dB",sty$note)){#plotting obs/sim
 				yvar=gsub("(NRCS .)([XK][vh]{2})(.+)","\\2",title)
 				}else{#plotting field measurements
 					data=data[!duplicated(data[,plotlist$X,]),]#grab one copy of data[] for each Xval.
@@ -850,7 +865,7 @@ sty<<-sty;	invisible(sty) #for legend plotting.
 
 }
 
-temp=plotNRCS(subset(newdata, (Xpol.frac==0.2 & soil.meanslope==0.05  |grepl("obs",model))& date=="16/02/2011" ), X="inc", Y="dB", Z="FreqPol", plotGroup=c("MEMLS","OBS"))
+#temp=plotNRCS(subset(newdata, (Xpol.frac==0.2 & soil.meanslope==0.05  |grepl("obs",model))& date=="16/02/2011" ), X="inc", Y="dB", Z="FreqPol", plotGroup=c("MEMLS","OBS"))
 
 
 
@@ -874,7 +889,7 @@ temp=plotNRCS(subset(newdata, (Xpol.frac==0.2 & soil.meanslope==0.05  |grepl("ob
 
 
 #testing:
-if(F){
+if(F){#By DATE
 	####all these should plot successfully...
 	
 	#Test plotting Sims: MEMLS
@@ -883,6 +898,9 @@ if(F){
 	temp=plotNRCS(subset(newdata, Xpol.frac==0.2 & soil.meanslope==0.05 ), X="date", Y="dB", Z="FreqPol", plotGroup="MEMLS:VAR:incidence@39")
 	temp=plotNRCS(subset(newdata, Xpol.frac==0.2 & soil.meanslope==0.05 ), X="date", Y="dB", Z="FreqPol", plotGroup="MEMLS:VAR:logscale:incidence@39")
 	temp=plotNRCS(subset(newdata, Xpol.frac==0.2 & soil.meanslope==0.05 ), X="date", Y="dB", Z="FreqPol", plotGroup="MEMLS:VAR:linscale:incidence@39")
+	temp=plotNRCS(subset(newdata, (Xpol.frac==0.2 & soil.meanslope==0.05  |grepl("obs",model))), X="date", Y="dB", Z="FreqPol", plotGroup=c("OBS","MEMLS:VAR:incidence@AVG<33-45>"))
+	temp=plotNRCS(subset(newdata, (Xpol.frac==0.2 & soil.meanslope==0.05  |grepl("obs",model))), X="date", Y="dB", Z="FreqPol", plotGroup=c("OBS:VAR:incidence@AVG<33-45>","MEMLS:VAR:incidence@AVG<33-45>"))
+
 	
 	#test plotting obs
 	temp=plotNRCS(subset(newdata, (Xpol.frac==0.2 & soil.meanslope==0.05 | grepl("obs",model))&incidence==39), X="date", Y="dB", Z="FreqPol", plotGroup="OBS")
@@ -896,18 +914,21 @@ if(F){
 	temp=plotNRCS(subset(newdata, (Xpol.frac==0.2 & soil.meanslope==0.05 | grepl("obs",model))&incidence==39), X="date", Y="dB", Z="FreqPol", plotGroup=c("OBS","MEMLS","FIELD:SWE:","FIELD:DHF:", "FIELD:RHOS:", "FIELD:GZ:", "FIELD:TGND:", "FIELD:EPSG.Re:", "FIELD:EPSG.Im:"), legendOnOwnPanel=F)
 	temp=plotNRCS(subset(newdata, (Xpol.frac==0.2 & soil.meanslope==0.05 | grepl("obs",model))&incidence==39), X="date", Y="dB", Z="FreqPol", plotGroup=c("OBS","MEMLS","FIELD:SWE:","FIELD:DHF:", "FIELD:RHOS:", "FIELD:GZ:", "FIELD:TGND:", "FIELD:EPSG.Re:", "FIELD:EPSG.Im:"), legendOnOwnPanel=T)
 	temp=plotNRCS(subset(newdata, (Xpol.frac==0.2 & soil.meanslope==0.05 | grepl("obs",model))&incidence==39), X="date", Y="dB", Z="FreqPol", plotGroup=c("OBS","MEMLS","FIELD:SWE:","FIELD:DHF:", "FIELD:RHOS:", "FIELD:GZ:", "FIELD:TGND:", "FIELD:EPSG.Re:", "FIELD:EPSG.Im:"), legendOnOwnPanel=2)
+	
+	#test plotting by sweepvar
+	temp=plotNRCS(subset(newdata, (soil.meanslope==0.05 | grepl("obs",model))&incidence==39), X="date", Y="dB", Z="FreqPol", plotGroup=c("MEMLS","OBS"))#TODO: fix dedupe selection here.
+	temp=plotNRCS(subset(newdata, (soil.meanslope==0.05 | grepl("obs",model))&incidence==39), X="date", Y="dB", Z="FreqPol", plotGroup=c("MEMLS:VAR:Xpol.frac","OBS" ))
+	temp=plotNRCS(subset(newdata, (Xpol.frac==0.2 | grepl("obs",model))&incidence==39), X="date", Y="dB", Z="FreqPol", plotGroup=c("OBS","MEMLS:VAR:soil.meanslope" ))
 	}
 
 
 
-if(F){
+if(F){ #By INC
 	temp=plotNRCS(subset(newdata, Xpol.frac==0.2 & soil.meanslope==0.05 &date=="16/02/2011"), X="inc", Y="dB", Z="FreqPol", plotGroup="MEMLS")
+	temp=plotNRCS(subset(newdata, (Xpol.frac==0.2 & soil.meanslope==0.05 |grepl("obs",model))&date=="16/02/2011"), X="inc", Y="dB", Z="FreqPol", plotGroup=c("OBS","MEMLS"))
 
 temp=plotNRCS(subset(newdata, Xpol.frac==0.2 & soil.meanslope==0.05 ), X="inc", Y="dB", Z="FreqPol", plotGroup="MEMLS")
 temp=plotNRCS(subset(newdata, Xpol.frac==0.2 & soil.meanslope==0.05 |grepl("obs",model)), X="inc", Y="dB", Z="FreqPol", plotGroup=c("MEMLS","OBS"))
-	
-	
-	temp=plotNRCS(subset(newdata, (Xpol.frac==0.2 & soil.meanslope==0.05  |grepl("obs",model))& date=="16/02/2011" ), X="inc", Y="dB", Z="FreqPol", plotGroup=c("MEMLS","OBS:VAR:incidence@39"))
 	
 	}
 
